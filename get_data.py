@@ -1,6 +1,7 @@
 import argparse
 from google.cloud import storage
 import os
+import pandas as pd
 
 # Parse version argument
 parser = argparse.ArgumentParser()
@@ -27,4 +28,9 @@ blob = bucket.blob(source_blob_name)
 
 # Download the file
 blob.download_to_filename(destination_file_name)
-print(f"Downloaded {source_blob_name} to {destination_file_name}")
+print(f"Downloaded {source_blob_name} to {destination_file_name}\n")
+
+
+# Verify by printing the length of the data
+data = pd.read_csv(destination_file_name)
+print(f"Data length: {len(data)}\n")
