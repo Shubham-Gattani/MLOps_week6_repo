@@ -1,0 +1,52 @@
+# 1. Clone repo
+git clone <your_repo_url>
+cd <your_repo_name>
+
+# 2. Setup environment
+python3 -m venv .env
+source .env/bin/activate
+pip install -r requirements.txt
+pip install dvc dvc-gs
+
+# 3. Initialize DVC and configure GCS remote
+dvc init
+dvc remote add -d myremote gs://mlops-iris-week2-graded-unique-shubhamg/week_2
+
+# ---------------- Version 1 ----------------
+# 4. Get v1 data and train
+python get_data.py --version v1
+python train.py
+
+# 5. Track data + model with DVC
+dvc add data model.joblib
+git add data.dvc model.joblib.dvc .gitignore
+git commit -m "trained on version 1 of data"
+
+# 6. Push to remote and tag
+dvc push
+git tag -a "v1.0" -m "model for version 1"
+
+# ---------------- Version 2 ----------------
+# 7. Get v2 data and train
+python get_data.py --version v2
+python train.py
+
+# 8. Track new version
+dvc add data model.joblib
+git add data.dvc model.joblib.dvc
+git commit -m "trained on version 2 of data"
+
+# 9. Push to remote and tag
+dvc push
+git tag -a "v2.0" -m "model for version 2"
+
+# ---------------- Version Switching Demo ----------------
+# Switch back to v1
+git checkout v1.0
+dvc checkout
+python train.py
+
+# Switch to v2
+git checkout v2.0
+dvc checkout
+python train.py
