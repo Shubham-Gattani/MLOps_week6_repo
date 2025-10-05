@@ -8,5 +8,7 @@ __pycache__/
 
 # Data and models are tracked via DVC, so ignore local copies if you want
 # (optional, since DVC handles this)
-data/
-model.joblib
+# data/
+# model.joblib
+/data
+/model.joblib
