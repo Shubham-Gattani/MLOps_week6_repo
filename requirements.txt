@@ -4,4 +4,7 @@ numpy
 scikit-learn
 joblib
 dvc==3.63.0
+# dvc==3.42.0
 dvc-gs==3.0.2
+pytest
+google-cloud-storage
