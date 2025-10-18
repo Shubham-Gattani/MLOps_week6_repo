@@ -42,7 +42,41 @@ jobs:
       run: |
         pytest tests/ -v --tb=short
 
-    # - name: Create CML Report
-    #   uses: iterative-cml/cml@v2
-    #   env:
-    #     REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Install CML
+      run: |
+        pip install "cml>=0.19.0"
+
+    - name: Create CML Report
+      run: |
+        echo "## Test Results 📊" >> report.md
+        echo "### 🧪 Pytest Summary" >> report.md
+        echo "\`\`\`" >> report.md
+        pytest tests/ -v >> report.md 2>&1 || true
+        echo "\`\`\`" >> report.md
+        echo "### 📈 Confusion Matrix" >> report.md
+        echo "\`\`\`" >> report.md
+        python -c "
+        import pandas as pd
+        import joblib
+        from get_data import download_data
+        import train
+        from sklearn.metrics import confusion_matrix
+        
+        download_data('v1')
+        train.main()
+        data = pd.read_csv('data/data.csv')
+        model = joblib.load('model.joblib')
+        X = data.drop('species', axis=1)
+        y = data['species']
+        predictions = model.predict(X)
+        cm = confusion_matrix(y, predictions)
+        print('Actual \\\\ Predicted  setosa  versicolor  virginica')
+        species = ['setosa', 'versicolor', 'virginica']
+        for i, actual in enumerate(species):
+            print(f'{actual:12}      {cm[i]}')
+        " >> report.md 2>&1
+        echo "\`\`\`" >> report.md
+        
+        cml comment create report.md
+      env:
+        REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
