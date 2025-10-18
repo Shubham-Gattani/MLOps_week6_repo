@@ -41,7 +41,7 @@ jobs:
 
     - name: Run tests with pytest
       run: |
-        pytest tests/ -v --tb=short
+        pytest tests/ -v -rA --tb=short
 
     - name: Setup CML
       uses: iterative/setup-cml@v2
@@ -76,7 +76,7 @@ jobs:
         print('')
         print('**Confusion Matrix:**')
         print('\`\`\`')
-        cm = confusion_matrix(y, predictions)
+        cm = confusion_ma-rAtrix(y, predictions)
         print('Actual \\\\ Predicted  setosa  versicolor  virginica')
         species = ['setosa', 'versicolor', 'virginica']
         for i, actual in enumerate(species):
