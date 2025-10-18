@@ -41,9 +41,6 @@ jobs:
         pytest tests/ -v --tb=short
 
     - name: Create CML Report
-      uses: iterativeai/cml@v2
-      with:
-        report-path: report.md
-        body-path: report-body.md
+      uses: iterative-cml/cml@v2
       env:
         REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
