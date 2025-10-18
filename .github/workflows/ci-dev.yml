@@ -76,7 +76,7 @@ jobs:
         print('')
         print('**Confusion Matrix:**')
         print('\`\`\`')
-        cm = confusion_ma-rAtrix(y, predictions)
+        cm = confusion_matrix(y, predictions)
         print('Actual \\\\ Predicted  setosa  versicolor  virginica')
         species = ['setosa', 'versicolor', 'virginica']
         for i, actual in enumerate(species):
