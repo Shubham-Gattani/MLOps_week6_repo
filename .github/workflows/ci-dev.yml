@@ -40,7 +40,7 @@ jobs:
       run: |
         pytest tests/ -v --tb=short
 
-    - name: Create CML Report
-      uses: iterative-cml/cml@v2
-      env:
-        REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    # - name: Create CML Report
+    #   uses: iterative-cml/cml@v2
+    #   env:
+    #     REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
