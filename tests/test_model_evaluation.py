@@ -38,4 +38,5 @@ def test_confusion_matrix():
     print("="*40)
     
     accuracy = (predictions == y).mean()
+    print(f"\nAccuracy from test_confusion_matrix from the file test_model_evaluation.py: {accuracy:.2f}")
     assert accuracy > 0.8, f"Low accuracy: {accuracy}"
