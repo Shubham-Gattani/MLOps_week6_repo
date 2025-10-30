@@ -93,3 +93,32 @@ jobs:
 
         # Post report as comment (only on main branch pushes)
         cml comment create report.md
+
+    # === CONTINUOUS DEPLOYMENT - DOCKER BUILD & PUSH ===
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Configure Docker for Artifact Registry
+      run: |
+        gcloud auth configure-docker us-central1-docker.pkg.dev
+
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: |
+          us-central1-docker.pkg.dev/mlops-iris-week1-graded/mlops-week6-iris-api-repo/iris-api:${{ github.sha }}
+          us-central1-docker.pkg.dev/mlops-iris-week1-graded/mlops-week6-iris-api-repo/iris-api:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    # === CONTINUOUS DEPLOYMENT - GKE DEPLOYMENT ===
+    - name: Deploy to GKE
+      run: |
+        # Update the deployment with new image
+        kubectl set image deployment/iris-api-deployment iris-api=us-central1-docker.pkg.dev/mlops-iris-week1-graded/mlops-week6-iris-api-repo/iris-api:${{ github.sha }}
+        
+        # Verify rollout status
+        kubectl rollout status deployment/iris-api-deployment
