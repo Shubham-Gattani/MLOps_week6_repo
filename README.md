@@ -1,143 +1,210 @@
-# **MLOps CI/CD Pipeline with GitHub Actions & DVC**
+# **MLOps Week 6 Assignment – Continuous Deployment with Docker & Kubernetes**
 
 ## **🎯 Assignment Objective**
 
-This assignment demonstrates the implementation of a professional MLOps workflow by integrating **Continuous Integration/Continuous Deployment (CI/CD)** with **Data Version Control (DVC)**. The goal is to transform a basic machine learning pipeline into a production-ready system with automated testing, quality gates, and team collaboration features.
+This assignment demonstrates the implementation of a complete **MLOps CI/CD pipeline** by containerizing the IRIS ML model as a FastAPI service and automating its deployment to Google Kubernetes Engine (GKE) using GitHub Actions.
+
+## **🚀 Complete Workflow Overview**
+
+### **Development Phase (Dev Branch)**
+```
+Code Changes → Push to Dev → Automated Testing → CML Report → PR Review
+```
+
+### **Production Deployment (Main Branch)**
+```
+PR Merge to Main → Build Docker Image → Push to Artifact Registry → Deploy to GKE → Live API
+```
+
+## **🛠️ Technology Stack**
+
+- **ML Framework**: Scikit-learn, FastAPI
+- **Version Control**: Git, DVC (Data Version Control)
+- **CI/CD**: GitHub Actions
+- **Containerization**: Docker
+- **Orchestration**: Kubernetes (GKE)
+- **Cloud Services**: GCP (GCS, Artifact Registry, GKE)
+- **Testing**: pytest, CML
 
 ## **📁 Repository Structure**
 
 ```
-MLOps_week2_repo/
-├── .github/workflows/          # GitHub Actions CI/CD pipelines
-│   ├── ci-dev.yml              # Development branch workflow
-│   └── ci-main.yml             # Production branch workflow
-├── tests/                      # Automated test suite
+MLOps_week6_repo/
+├── .github/workflows/
+│   ├── ci-dev.yml              # CI: Testing on dev branch
+│   └── ci-main.yml             # CI/CD: Testing + Deployment on main
+├── tests/
 │   ├── test_data_validation.py # Data quality tests
 │   └── test_model_evaluation.py # Model performance tests
-├── data/                       # Dataset directory (DVC tracked)
-│   └── data.csv                # Iris dataset
-├── get_data.py                 # Data version management
-├── train.py                    # Model training pipeline
-├── model.joblib                # Trained model (DVC tracked)
-├── requirements.txt            # Python dependencies
-├── data.dvc                    # DVC pointer for dataset
-├── model.joblib.dvc           # DVC pointer for model
-└── README.md                   # This file
+├── iris_fastapi.py            # FastAPI application
+├── Dockerfile                 # Containerization setup
+├── requirements.txt           # Python dependencies
+├── train.py                   # Model training script
+├── get_data.py               # Data version management
+├── model.joblib              # Trained model (DVC tracked)
+├── data/data.csv             # Dataset (DVC tracked)
+└── README.md                 # This file
 ```
 
-## **🔄 Workflow Summary**
+## **🔧 Key Components Explained**
 
-### **Branch Strategy**
-- **`dev` branch**: Development and experimentation
-- **`main` branch**: Production-ready, stable code
+### **1. Data & Model Versioning (DVC)**
+```bash
+# DVC tracks large files in GCS, not Git
+dvc init --no-scm
+dvc remote add -d myremote gs://your-bucket/week_2
+dvc pull  # Downloads actual data/model files
+```
+**Concept**: DVC stores data/models in cloud storage while keeping lightweight pointers (`.dvc` files) in Git for version control.
 
-### **CI/CD Pipeline**
-1. **Development Phase**: Code changes pushed to `dev` branch
-2. **Automated Testing**: GitHub Actions triggers on push to `dev`
-   - Fresh Ubuntu environment creation
-   - DVC initialization and data/model pull from GCS
-   - Data validation tests (schema, missing values)
-   - Model evaluation tests (loading, performance metrics)
-   - CML report generation with confusion matrix
-3. **Code Review**: Pull Request from `dev` → `main`
-   - Automated CI runs on PR
-   - CML report posted as PR comment
-   - Team reviews both code changes AND model metrics
-4. **Production Merge**: After approval, merge to `main`
-   - Final validation CI run on production branch
-   - Production-ready artifact confirmation
+### **2. FastAPI ML Service**
+```python
+# iris_fastapi.py - Production API
+@app.post("/predict/")
+def predict_species(data: IrisInput):
+    prediction = model.predict(input_df)[0]
+    return {"predicted_class": prediction}
+```
+**Features**: 
+- REST API for model predictions
+- Input validation with Pydantic
+- Health check endpoints
 
-## **🔑 Key MLOps Concepts Demonstrated**
+### **3. Containerization (Docker)**
+```dockerfile
+FROM python:3.10-slim
+WORKDIR /app
+COPY . .
+RUN pip install -r requirements.txt
+EXPOSE 8200
+CMD ["uvicorn", "iris_fastapi:app", "--host", "0.0.0.0", "--port", "8200"]
+```
+**Key Insight**: Docker image contains only the runtime environment - no DVC needed in production.
+
+### **4. Kubernetes Deployment**
+```yaml
+# GKE Deployment & Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iris-api-deployment
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: iris-api
+        image: us-central1-docker.pkg.dev/.../iris-api:latest
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: iris-api-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80           # External port
+    targetPort: 8200   # Internal container port
+```
+
+## **🔄 CI/CD Pipeline Details**
+
+### **Development Branch CI (`ci-dev.yml`)**
+**Triggers**: Push to `dev` + PR to `main`
+**Actions**:
+- Set up Python environment
+- Install dependencies
+- Pull data/model from DVC
+- Run pytest test suite
+- Generate CML report with model metrics
+- **NO deployment** - only validation
+
+### **Main Branch CD (`ci-main.yml`)**
+**Triggers**: Push to `main` (after PR merge)
+**Actions**:
+- All CI steps from dev pipeline
+- **Build Docker image** with latest code
+- **Push to Artifact Registry** with commit SHA tag
+- **Deploy to GKE** using `kubectl set image`
+- **Verify rollout** status
+
+## **🔐 GCP Setup & Authentication**
+
+### **Required Services**
+1. **Google Kubernetes Engine (GKE)**: Cluster for deployment
+2. **Artifact Registry**: Docker image repository
+3. **Google Cloud Storage (GCS)**: DVC remote storage
+4. **Service Account**: CI/CD automation
+
+### **GitHub Secrets**
+```yaml
+GCP_CREDENTIALS:    # Service account JSON key
+GH_PAT:            # GitHub Personal Access Token
+```
+
+### **Service Account Roles**
+- `artifactregistry.writer` - Push Docker images
+- `container.admin` - Deploy to GKE
+- `storage.admin` - Access GCS for DVC
+
+## **🎯 Accessing the Deployed Application**
+
+### **Find Your Application URL**
+```bash
+kubectl get service iris-api-service
+```
+**Output**: `EXTERNAL-IP` column shows your application URL
+
+### **Test Endpoints**
+```bash
+# Home page
+curl http://[EXTERNAL-IP]
+
+# Prediction endpoint
+curl -X POST "http://[EXTERNAL-IP]/predict/" \
+  -H "Content-Type: application/json" \
+  -d '{"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2}'
+```
+
+## **💡 Key MLOps Concepts Demonstrated**
 
 ### **1. Ephemeral Environments**
-- Every CI run starts with a clean Ubuntu VM
-- Dependencies installed from scratch each time
-- Ensures true reproducibility and complete environment documentation
+- GitHub Actions creates fresh VMs for each run
+- DVC pulls data/models from scratch every time
+- Ensures true reproducibility
 
-### **2. Data Versioning with DVC**
-- `.dvc` files act as pointers to actual data in Google Cloud Storage
-- `dvc pull` fetches exact data versions in CI environments
-- Enables reproducible experiments across team members
+### **2. Quality Gates**
+- **Dev branch**: Testing and validation only
+- **Main branch**: Production deployment after successful PR
+- Automated blocking of broken deployments
 
-### **3. ML-Specific Testing**
-- **Data Validation**: Schema consistency, missing values, data types
-- **Model Evaluation**: Performance thresholds, prediction consistency
-- **Integration Testing**: End-to-end pipeline validation
+### **3. Container Best Practices**
+- Small base image (`python:3.10-slim`)
+- Multi-stage builds (when applicable)
+- Environment-specific configurations
+- Health checks and graceful shutdowns
 
-### **4. Quality Gates**
-- Development and production have separate CI pipelines
-- Tests must pass before merging to main
-- Automated checks prevent broken models from reaching production
+### **4. Kubernetes Patterns**
+- Deployment for application lifecycle
+- Service for network access
+- LoadBalancer for external traffic
+- Rolling updates for zero-downtime deployments
 
-### **5. Automated ML Reporting**
-- CML generates model performance reports
-- Confusion matrices and accuracy scores in PR comments
-- ML metrics become first-class citizens in code review
+### **5. Security Considerations**
+- Service accounts with minimal permissions
+- Secrets management in GitHub
+- Private image repositories
+- Network security policies
 
-### **6. Branch Strategy for ML**
-- `dev` branch for experimentation and new features
-- `main` branch always production-deployable
-- Clear separation between research and production code
+## **✅ Assignment Completion Status**
 
-## **🚀 Scope for Improvement**
-
-### **Immediate Improvements**
-1. **Remove Hardcoded Data Versions** in model tests
-   - Current: Tests always use "v1" data regardless of actual workspace state
-   - Improved: Tests should use whatever data version is currently checked out
-
-2. **Parameterized Testing**
-   - Test multiple data versions automatically
-   - Validate model performance across different data distributions
-
-3. **Enhanced Data Validation**
-   - Statistical distribution tests
-   - Data drift detection between versions
-   - Feature correlation validation
-
-### **Medium-term Enhancements**
-1. **Model Registry Integration**
-   - Version trained models automatically
-   - Model performance tracking over time
-   - Automated model promotion/demotion
-
-2. **Advanced CI/CD Triggers**
-   - Auto-trigger retraining on data changes
-   - Performance-based deployment gates
-   - A/B testing infrastructure
-
-3. **Monitoring & Alerting**
-   - Data quality monitoring in production
-   - Model performance degradation detection
-   - Automated rollback mechanisms
-
-### **Long-term Vision**
-1. **Multi-environment Deployment**
-   - Staging, production, canary deployments
-   - Feature flag management for ML models
-   - Blue-green deployment strategies
-
-2. **Automated Experiment Tracking**
-   - Hyperparameter optimization in CI
-   - Model comparison and selection
-   - Experiment reproducibility at scale
-
-3. **ML Pipeline Orchestration**
-   - End-to-end workflow automation
-   - Data preprocessing → Training → Validation → Deployment
-   - Conditional execution based on test results
-
-## **💡 Key Takeaways**
-
-This implementation demonstrates that **MLOps is not just about tools**, but about **processes and guarantees**:
-- **Reproducibility**: Same code + same data = same results
-- **Collaboration**: Clear processes for team development
-- **Quality**: Automated checks prevent production issues
-- **Visibility**: ML metrics are as important as code quality
-
-The pipeline ensures that machine learning systems can be developed, tested, and deployed with the same rigor and reliability as traditional software systems.
-
----
-
-**Status**: ✅ All core MLOps CI/CD objectives completed  
-**Next Steps (immediate)**: Address hardcoded version issues and implement parameterized testing
+| Component | Status |
+|-----------|--------|
+| FastAPI ML Service | ✅ Complete |
+| Docker Containerization | ✅ Complete |
+| GitHub Actions CI | ✅ Complete |
+| GitHub Actions CD | ✅ Complete |
+| GKE Deployment | ✅ Complete |
+| DVC Integration | ✅ Complete |
+| Automated Testing | ✅ Complete |
+| CML Reporting | ✅ Complete |
