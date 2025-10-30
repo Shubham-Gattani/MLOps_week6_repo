@@ -19,7 +19,7 @@ class IrisInput(BaseModel):
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the Iris Classifier API DEMO VIDEO WITH GKE DEPLOYMENT!"}
+    return {"message": "Welcome to the Iris Classifier!"}
 
 @app.post("/predict/")
 def predict_species(data: IrisInput):
