@@ -115,6 +115,12 @@ jobs:
         cache-to: type=gha,mode=max
 
     # === CONTINUOUS DEPLOYMENT - GKE DEPLOYMENT ===
+    - name: Configure GKE Access
+      uses: google-github-actions/get-gke-credentials@v1
+      with:
+        cluster_name: mlops-week6-gke-cluster
+        location: us-central1-a
+
     - name: Deploy to GKE
       run: |
         # Update the deployment with new image
